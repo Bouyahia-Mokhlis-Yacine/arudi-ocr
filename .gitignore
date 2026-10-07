@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.cache/
+*.sqlite
+*.jpg
+!examples/*.jpg
+.venv/
