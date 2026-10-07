@@ -1,11 +1,14 @@
 """Model definitions (must match the training code) and checkpoint loaders."""
 import math
+import os
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 
-WEIGHTS = Path(__file__).resolve().parent.parent / "weights"
+_ROOT = Path(__file__).resolve().parent.parent
+# weights are looked up in $ARUDI_WEIGHTS, then <repo>/weights (GitHub layout), then <repo> (Kaggle Models layout)
+WEIGHT_DIRS = [Path(p) for p in [os.environ.get("ARUDI_WEIGHTS")] if p] + [_ROOT / "weights", _ROOT]
 PAD, BOS, EOS, UNK = 0, 1, 2, 3
 
 
@@ -55,7 +58,11 @@ class Seq2Seq(nn.Module):
 
 
 def _load(name, device):
-    path = Path(name) if Path(name).exists() else WEIGHTS / name
+    path = Path(name)
+    if not path.exists():
+        path = next((d / name for d in WEIGHT_DIRS if (d / name).exists()), None)
+        if path is None:
+            raise FileNotFoundError(f"{name} not found in {[str(d) for d in WEIGHT_DIRS]} (git lfs pull? set ARUDI_WEIGHTS?)")
     ck = torch.load(path, map_location=device, weights_only=False)
     return ck, {k: v.float() if v.is_floating_point() else v for k, v in ck["model"].items()}
 
