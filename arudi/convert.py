@@ -2,7 +2,19 @@
 import re
 
 import torch
-from rapidfuzz.distance import Levenshtein
+
+try:  # rapidfuzz is faster, but optional (e.g. offline Kaggle notebooks don't ship it)
+    from rapidfuzz.distance import Levenshtein
+    _lev = Levenshtein.distance
+except ImportError:
+    def _lev(a, b):
+        prev = list(range(len(b) + 1))
+        for i, ca in enumerate(a, 1):
+            cur = [i]
+            for j, cb in enumerate(b, 1):
+                cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+            prev = cur
+        return prev[-1]
 
 from .models import PAD, BOS, EOS, UNK
 
@@ -41,7 +53,7 @@ def greedy(model, itos, texts, batch_size=64, device="cpu"):
 
 def mbr(candidates):
     """Pick the candidate with the smallest total Levenshtein distance to all others."""
-    return min(candidates, key=lambda c: (sum(Levenshtein.distance(c, h) for h in candidates), candidates.index(c)))
+    return min(candidates, key=lambda c: (sum(_lev(c, h) for h in candidates), candidates.index(c)))
 
 
 def convert(converters, texts, device="cpu"):

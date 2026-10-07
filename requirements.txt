@@ -1,5 +1,5 @@
 torch>=2.1
 numpy
 pillow
-rapidfuzz
-pyarrow  # only for build-corpus
+rapidfuzz  # optional: faster; required only for corpus snapping
+pyarrow    # optional: only for build-corpus
